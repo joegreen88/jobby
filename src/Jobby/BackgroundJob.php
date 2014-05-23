@@ -6,6 +6,7 @@ use Jobby\Helper;
 use Jobby\Exception;
 use Jobby\InfoException;
 use Cron\CronExpression;
+use Guzzle\Http\Client;
 
 /**
  *
@@ -61,6 +62,7 @@ class BackgroundJob
         } catch (Exception $e) {
             $this->log("ERROR: " . $e->getMessage());
             $this->mail($e->getMessage());
+			$this->submitMonitor(true);
             return;
         }
 
@@ -69,6 +71,8 @@ class BackgroundJob
         }
 
         $lockAquired = false;
+		$failed = false;
+
         try {
             $this->helper->aquireLock($lockfile);
             $lockAquired = true;
@@ -78,16 +82,21 @@ class BackgroundJob
             } else {
                 $this->runFile();
             }
+
         } catch (InfoException $e) {
             $this->log("INFO: " . $e->getMessage());
+			$failed = true;
         } catch (Exception $e) {
             $this->log("ERROR: " . $e->getMessage());
             $this->mail($e->getMessage());
+			$failed = true;
         }
+
+		$this->submitMonitor($failed);
 
         if ($lockAquired) {
             $this->helper->releaseLock($lockfile);
-            
+
             // remove log file if empty
             $logfile = $this->getLogfile();
             if(is_file($logfile) && filesize($logfile)<=0) {
@@ -95,6 +104,35 @@ class BackgroundJob
             }
         }
     }
+
+	/**
+	 * Submit the log file to monitor system
+	 * @param boolean $failed
+	 */
+	private function submitMonitor($failed) {
+		if ($this->config['monitor'] === null) {
+			return false;
+		}
+
+		$logfile = $this->getLogfile();
+
+		$str = '<run>';
+		$str .= '<log encoding="hexBinary">' . bin2hex(file_get_contents($logfile) . "\n") . '</log>';
+		$str .= '<result>' . intval($failed) . '</result>';
+		$str .= '<duration>1000</duration>';
+		$str .= '<displayName>' . $this->job . '</displayName>';
+		$str .= '</run>';
+
+		$client = new Client();
+
+		try {
+			$client->post($this->config['monitor'], null, $str, array('connect_timeout' => 5, 'timeout' => 10));
+			return true;
+		}
+		catch (Exception $e) {
+			return false;
+		}
+	}
 
     /**
      * @param string $lockfile
@@ -139,7 +177,14 @@ class BackgroundJob
     private function getLogfile()
     {
         if ($this->config['output'] === null) {
-            return "/dev/null";
+			if ($this->config['monitor'] === null) {
+	            return "/dev/null";
+			}
+			else {
+				$tmp = $this->tmpDir;
+				$job = $this->helper->escape($this->job);
+				return "$tmp/$job.monitor";
+			}
         }
 
         $logfile = $this->config['output'];
@@ -295,6 +340,7 @@ if (!debug_backtrace()) {
                 'dateFormat' => null,
                 'enabled' => null,
                 'debug' => null,
+				'monitor' => null
             ),
             $config
         );
