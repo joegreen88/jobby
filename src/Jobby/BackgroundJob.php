@@ -119,7 +119,7 @@ class BackgroundJob
 		$str = '<run>';
 		$str .= '<log encoding="hexBinary">' . bin2hex(file_get_contents($logfile) . "\n") . '</log>';
 		$str .= '<result>' . intval($failed) . '</result>';
-		$str .= '<duration>1000</duration>';
+		$str .= '<duration>10000</duration>';
 		$str .= '<displayName>' . $this->job . '</displayName>';
 		$str .= '</run>';
 
