@@ -97,9 +97,9 @@ class BackgroundJob
         if ($lockAquired) {
             $this->helper->releaseLock($lockfile);
 
-            // remove log file if empty
+            // remove log file
             $logfile = $this->getLogfile();
-            if(is_file($logfile) && filesize($logfile)<=0) {
+            if (is_file($logfile)) {
                 unlink($logfile);
             }
         }
@@ -126,7 +126,7 @@ class BackgroundJob
 		$client = new Client();
 
 		try {
-			$client->post($this->config['monitor'], null, $str, array('connect_timeout' => 5, 'timeout' => 10));
+			$client->post($this->config['monitor'], null, $str, array('connect_timeout' => 5, 'timeout' => 10))->send();
 			return true;
 		}
 		catch (Exception $e) {
