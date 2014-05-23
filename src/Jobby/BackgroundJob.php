@@ -94,6 +94,7 @@ class BackgroundJob
         }
 
 		$duration = microtime(true) - $startTime;
+		$duration = ceil($duration * 1000);
 		$this->submitMonitor($failed, $duration);
 
         if ($lockAquired) {
@@ -124,7 +125,7 @@ class BackgroundJob
 		$str .= '<result>' . intval($failed) . '</result>';
 
 		if ($duration) {
-			$str .= '<duration>' . $duration .'</duration>';
+			$str .= '<duration>' . $duration . '</duration>';
 		}
 
 		$str .= '<displayName>' . $this->job . '</displayName>';
