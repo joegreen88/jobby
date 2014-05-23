@@ -72,6 +72,7 @@ class BackgroundJob
 
         $lockAquired = false;
 		$failed = false;
+		$startTime = microtime(true);
 
         try {
             $this->helper->aquireLock($lockfile);
@@ -92,7 +93,8 @@ class BackgroundJob
 			$failed = true;
         }
 
-		$this->submitMonitor($failed);
+		$duration = microtime(true) - $startTime;
+		$this->submitMonitor($failed, $duration);
 
         if ($lockAquired) {
             $this->helper->releaseLock($lockfile);
@@ -108,8 +110,9 @@ class BackgroundJob
 	/**
 	 * Submit the log file to monitor system
 	 * @param boolean $failed
+	 * @param integer $duration
 	 */
-	private function submitMonitor($failed) {
+	private function submitMonitor($failed, $duration = false) {
 		if ($this->config['monitor'] === null) {
 			return false;
 		}
@@ -119,7 +122,11 @@ class BackgroundJob
 		$str = '<run>';
 		$str .= '<log encoding="hexBinary">' . bin2hex(file_get_contents($logfile) . "\n") . '</log>';
 		$str .= '<result>' . intval($failed) . '</result>';
-		$str .= '<duration>10000</duration>';
+
+		if ($duration) {
+			$str .= '<duration>' . $duration .'</duration>';
+		}
+
 		$str .= '<displayName>' . $this->job . '</displayName>';
 		$str .= '</run>';
 
