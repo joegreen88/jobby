@@ -137,7 +137,7 @@ class BackgroundJob
 			$client->post($this->config['monitor'], null, $str, array('connect_timeout' => 5, 'timeout' => 10))->send();
 			return true;
 		}
-		catch (Exception $e) {
+		catch (\Exception $e) {
 			return false;
 		}
 	}
