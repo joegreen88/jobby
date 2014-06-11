@@ -102,7 +102,8 @@ class BackgroundJob
 
             // remove log file
             $logfile = $this->getLogfile();
-            if (is_file($logfile)) {
+            clearstatcache();
+            if (is_file($logfile) && filesize($logfile) <= 0) {
                 unlink($logfile);
             }
         }
